@@ -22,6 +22,7 @@ http://www.cisst.org/cisst/license.txt.
 #include <cisstCommon/cmnPath.h>
 
 #include <cisstMultiTask/mtsTaskContinuous.h>
+#include <cisstParameterTypes/prmInputData.h>
 
 #include <sawJoystick/sawJoystickConfig.h>
 #include <sawJoystick/sawJoystickExport.h>  // always include last
@@ -33,9 +34,10 @@ class CISST_EXPORT mtsJoystick : public mtsTaskContinuous
 
  protected:
 
+
  public:
     inline mtsJoystick(const std::string & componentName):
-        mtsTaskContinuous(componentName, false, 1000)
+        mtsTaskContinuous(componentName, 1000)
     {
         Init();
     }
@@ -58,9 +60,15 @@ class CISST_EXPORT mtsJoystick : public mtsTaskContinuous
 
  protected:
     void Init(void);
+    void OpenDevice(void);
+    void CloseDevice(void);
 
     std::string mDeviceName;
+    int mDevice = 0;
     mtsInterfaceProvided * mControllerInterface;
+
+    prmInputData mInputData;
+    mtsFunctionWrite InputDataEvent;
 };
 
 CMN_DECLARE_SERVICES_INSTANTIATION(mtsJoystick);

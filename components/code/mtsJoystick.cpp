@@ -16,6 +16,11 @@ http://www.cisst.org/cisst/license.txt.
 --- end cisst license ---
 */
 
+#include <fcntl.h>
+// #include <stdio.h>
+// #include <unistd.h>
+#include <linux/joystick.h>
+
 #include <cisstCommon/cmnStrings.h>
 
 #include <cisstMultiTask/mtsInterfaceProvided.h>
@@ -41,17 +46,14 @@ void mtsJoystick::Init(void)
 {
     mDeviceName = "/dev/input/js0";
 
+    StateTable.AddData(mInputData, "input_data");
     mControllerInterface = AddInterfaceProvided("Controller");
     if (mControllerInterface) {
         mControllerInterface->AddMessageEvents();
-#if 0
-        mControllerInterface->AddCommandReadState(StateTable, mTracking, "IsTracking");
-#endif
+        mControllerInterface->AddCommandReadState(StateTable, mInputData, "input_data");
+        mControllerInterface->AddEventWrite(InputDataEvent, "input_data", mInputData);
         mControllerInterface->AddCommandReadState(StateTable, StateTable.PeriodStats,
                                                   "period_statistics");
-#if 0
-        mControllerInterface->AddEventWrite(Events.Connected, "Connected", std::string(""));
-#endif
     }
 }
 
@@ -228,15 +230,95 @@ void mtsJoystick::Configure(const std::string & filename)
 
 void mtsJoystick::Startup(void)
 {
+    if (mDevice == 0) {
+        OpenDevice();
+    }
 }
+
 
 void mtsJoystick::Run(void)
 {
     ProcessQueuedCommands();
     ProcessQueuedEvents();
+
+     if (mDevice != 0) {
+        ssize_t bytes;
+        struct js_event event;
+        bytes = read(mDevice, &event, sizeof(event));
+        if (bytes == sizeof(event)) {
+            switch (event.type) {
+            case JS_EVENT_BUTTON:
+                mInputData.DigitalInputs().at(event.number) = event.value;
+                break;
+            case JS_EVENT_AXIS:
+                mInputData.AnalogInputs().at(event.number) = event.value;
+                break;
+            default:
+                /* Ignore init events. */
+                break;
+            }
+            // emit event with new data
+            InputDataEvent(mInputData);
+        } else {
+            mControllerInterface->SendError(this->GetName() + ": read error on " + mDeviceName);
+            CloseDevice();
+        }
+    }
 }
 
 
 void mtsJoystick::Cleanup(void)
 {
+    CloseDevice();
+}
+
+
+void mtsJoystick::OpenDevice(void)
+{
+    if (mDevice != 0) {
+        CloseDevice();
+    }
+
+    mControllerInterface->SendStatus(this->GetName() + ": opening " + mDeviceName);
+    mDevice = open(mDeviceName.c_str(), O_RDONLY);
+
+    if (mDevice == -1) {
+        mControllerInterface->SendError(this->GetName() + ": can't open " + mDeviceName);
+        mDevice = 0;
+        return;
+    }
+
+    __u8 count;
+    size_t size;
+    if (ioctl(mDevice, JSIOCGAXES, &count) == -1) {
+        mControllerInterface->SendError(this->GetName() + ": can't retrieve number of axes for " + mDeviceName);
+        mDevice = 0;
+        return;
+    }
+    size = count;
+    mControllerInterface->SendStatus(this->GetName() + ": " + mDeviceName + " has " + std::to_string(size) + " axe(s)");
+    mInputData.AnalogInputs().SetSize(size);
+    mInputData.AnalogInputs().SetAll(0.0);
+
+    if (ioctl(mDevice, JSIOCGBUTTONS, &count) == -1) {
+        mControllerInterface->SendError(this->GetName() + ": can't retrieve number of buttons for " + mDeviceName);
+        mDevice = 0;
+        return;
+    }
+    size = count;
+    mControllerInterface->SendStatus(this->GetName() + ": " + mDeviceName + " has " + std::to_string(size) + " button(s)");
+    mInputData.DigitalInputs().SetSize(size);
+    mInputData.DigitalInputs().SetAll(false);
+    mInputData.SetValid(true);
+}
+
+
+void mtsJoystick::CloseDevice(void)
+{
+    if (mDevice != 0) {
+        mControllerInterface->SendStatus(this->GetName() + ": closing " + mDeviceName);
+        close(mDevice);
+        mDevice = 0;
+        mInputData.SetValid(false);
+    }
 }

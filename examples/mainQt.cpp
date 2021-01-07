@@ -22,8 +22,8 @@ http://www.cisst.org/cisst/license.txt.
 #include <cisstCommon/cmnQt.h>
 
 #include <cisstMultiTask/mtsTaskManager.h>
-#include <cisstParameterTypes/prmPositionCartesianGetQtWidgetFactory.h>
-#include <cisstParameterTypes/prmPositionCartesianArrayGetQtWidget.h>
+#include <cisstMultiTask/mtsSystemQtWidget.h>
+#include <cisstParameterTypes/prmInputDataQtWidget.h>
 
 #include <sawJoystick/mtsJoystick.h>
 
@@ -84,7 +84,7 @@ int main(int argc, char * argv[])
     QTabWidget * tabWidget = new QTabWidget;
 
     // create the components
-    mtsJoystick * joystick = new mtsJoystick("Joystick");
+    mtsJoystick * joystick = new mtsJoystick("joystick");
 
     // configure the components
     std::string configPath = "";
@@ -117,6 +117,19 @@ int main(int argc, char * argv[])
     // add the components to the component manager
     mtsManagerLocal * componentManager = mtsComponentManager::GetInstance();
     componentManager->AddComponent(joystick);
+
+    // GUI
+    mtsSystemQtWidgetComponent * systemWidget = new mtsSystemQtWidgetComponent("systemWidget");
+    componentManager->AddComponent(systemWidget);
+    componentManager->Connect("systemWidget", "Component",
+                              "joystick", "Controller");
+    tabWidget->addTab(systemWidget, "System");
+
+    prmInputDataQtWidgetComponent * inputWidget = new prmInputDataQtWidgetComponent("inputWidget");
+    componentManager->AddComponent(inputWidget);
+    componentManager->Connect("inputWidget", "Component",
+                              "joystick", "Controller");
+    tabWidget->addTab(inputWidget, "Input");
 
     // custom user component
     if (!componentManager->ConfigureJSON(managerConfig)) {
