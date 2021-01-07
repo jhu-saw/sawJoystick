@@ -1,0 +1,26 @@
+<package>
+  <name>joystick_ros</name>
+  <version>1.0.0</version>
+  <description>
+  sawJoystick ROS
+  </description>
+  <maintainer email="anton.deguet@jhu.edu">Anton Deguet</maintainer>
+  <license>cisst</license>
+  <url>https://github.com/jhu-saw/sawJoystick</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>saw_joystick</build_depend>
+  <build_depend>cisst_ros_crtk</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>roslib</build_depend>
+
+  <run_depend>saw_joystick</run_depend>
+  <run_depend>cisst_ros_crtk</run_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>roslib</run_depend>
+
+  <export>
+  </export>
+
+</package>
