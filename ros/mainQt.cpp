@@ -30,6 +30,7 @@ http://www.cisst.org/cisst/license.txt.
 #include <QApplication>
 #include <QMainWindow>
 
+#include <cisst_ros_bridge/mtsROSBridge.h>
 #include <cisst_ros_crtk/mts_ros_crtk_bridge.h>
 
 int main(int argc, char * argv[])
@@ -145,13 +146,25 @@ int main(int argc, char * argv[])
     componentManager->Connect("inputWidget", "Component",
                               "joystick", "Controller");
     tabWidget->addTab(inputWidget, "Input");
-    
+
     // ROS CRTK bridge
     mts_ros_crtk_bridge * crtk_bridge
         = new mts_ros_crtk_bridge("joystick_crtk_bridge", &rosNodeHandle);
     crtk_bridge->bridge_interface_provided("joystick", "Controller", joystick->GetName(),
                                            rosPeriod, tfPeriod);
+    // custom commands
+    std::string space = joystick->GetName() + "/";
+    mtsROSBridge & subscribers_bridge = crtk_bridge->subscribers_bridge();
+    subscribers_bridge.AddSubscriberToCommandWrite<std::string, std_msgs::String>
+        ("Controller", "set_device", space + "set_device");
+    subscribers_bridge.AddSubscriberToCommandVoid
+        ("Controller", "open_device", space + "open_device");
+    subscribers_bridge.AddSubscriberToCommandVoid
+        ("Controller", "close_device", space + "close_device");
+    // add and connect all
     componentManager->AddComponent(crtk_bridge);
+    componentManager->Connect(subscribers_bridge.GetName(), "Controller",
+                              "joystick", "Controller");
     crtk_bridge->Connect();
 
     // custom user component

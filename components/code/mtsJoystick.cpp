@@ -17,39 +17,54 @@ http://www.cisst.org/cisst/license.txt.
 */
 
 #include <fcntl.h>
-// #include <stdio.h>
-// #include <unistd.h>
+#include <errno.h>
 #include <linux/joystick.h>
 
 #include <cisstCommon/cmnStrings.h>
-
+#include <cisstCommon/cmnUnits.h>
 #include <cisstMultiTask/mtsInterfaceProvided.h>
 #include <sawJoystick/mtsJoystick.h>
 
 CMN_IMPLEMENT_SERVICES_DERIVED_ONEARG(mtsJoystick, mtsTaskContinuous, mtsTaskContinuousConstructorArg);
 
-#if (CISST_OS == CISST_LINUX) || (CISST_OS == CISST_DARWIN)
-#include <glob.h>
-inline bool Glob(const std::string & pattern, std::vector<std::string> & paths) {
-    glob_t glob_result;
-    bool result = glob(pattern.c_str(), 0, 0, &glob_result);
-    for (unsigned int i = 0; i < glob_result.gl_pathc; i++) {
-        paths.push_back(std::string(glob_result.gl_pathv[i]));
-    }
-    globfree(&glob_result);
-    return result;
+struct mtsJoystickInternals {
+    int Device = 0;
+};
+
+
+mtsJoystick::mtsJoystick(const std::string & componentName):
+    mtsTaskContinuous(componentName, 1000)
+{
+    Init();
 }
-#endif
+
+
+mtsJoystick::mtsJoystick(const mtsTaskContinuousConstructorArg & arg):
+    mtsTaskContinuous(arg)
+{
+    Init();
+}
+
+
+mtsJoystick::~mtsJoystick()
+{
+    delete mInternals;
+}
 
 
 void mtsJoystick::Init(void)
 {
+    mInternals = new mtsJoystickInternals;
+
     mDeviceName = "/dev/input/js0";
 
     StateTable.AddData(mInputData, "input_data");
     mControllerInterface = AddInterfaceProvided("Controller");
     if (mControllerInterface) {
         mControllerInterface->AddMessageEvents();
+        mControllerInterface->AddCommandWrite(&mtsJoystick::SetDevice, this, "set_device", std::string("/dev/input/js0"));
+        mControllerInterface->AddCommandVoid(&mtsJoystick::OpenDevice, this, "open_device");
+        mControllerInterface->AddCommandVoid(&mtsJoystick::CloseDevice, this, "close_device");
         mControllerInterface->AddCommandReadState(StateTable, mInputData, "input_data");
         mControllerInterface->AddEventWrite(InputDataEvent, "input_data", mInputData);
         mControllerInterface->AddCommandReadState(StateTable, StateTable.PeriodStats,
@@ -230,7 +245,7 @@ void mtsJoystick::Configure(const std::string & filename)
 
 void mtsJoystick::Startup(void)
 {
-    if (mDevice == 0) {
+    if (mInternals->Device == 0) {
         OpenDevice();
     }
 }
@@ -241,11 +256,12 @@ void mtsJoystick::Run(void)
     ProcessQueuedCommands();
     ProcessQueuedEvents();
 
-     if (mDevice != 0) {
-        ssize_t bytes;
+    if (mInternals->Device != 0) {
+        ssize_t readResult;
         struct js_event event;
-        bytes = read(mDevice, &event, sizeof(event));
-        if (bytes == sizeof(event)) {
+        readResult = read(mInternals->Device, &event, sizeof(event));
+        int errnum = errno;
+        if (readResult == sizeof(event)) {
             switch (event.type) {
             case JS_EVENT_BUTTON:
                 mInputData.DigitalInputs().at(event.number) = event.value;
@@ -260,9 +276,17 @@ void mtsJoystick::Run(void)
             // emit event with new data
             InputDataEvent(mInputData);
         } else {
-            mControllerInterface->SendError(this->GetName() + ": read error on " + mDeviceName);
+            if (errnum == EAGAIN) {
+                Sleep(1.0 * cmn_ms); // pseudo 1kHz
+                return;
+            }
+            // other cases should indicate an error
+            mControllerInterface->SendError(this->GetName() + ": read error on " + mDeviceName + ", " + strerror(errnum));
             CloseDevice();
         }
+    } else {
+        // if no device, nothing to do so sleep to not hog CPU
+        Sleep(1.0 * cmn_ms);
     }
 }
 
@@ -275,24 +299,24 @@ void mtsJoystick::Cleanup(void)
 
 void mtsJoystick::OpenDevice(void)
 {
-    if (mDevice != 0) {
+    if (mInternals->Device != 0) {
         CloseDevice();
     }
 
     mControllerInterface->SendStatus(this->GetName() + ": opening " + mDeviceName);
-    mDevice = open(mDeviceName.c_str(), O_RDONLY);
+    mInternals->Device = open(mDeviceName.c_str(), O_RDONLY | O_NONBLOCK);
 
-    if (mDevice == -1) {
+    if (mInternals->Device == -1) {
         mControllerInterface->SendError(this->GetName() + ": can't open " + mDeviceName);
-        mDevice = 0;
+        mInternals->Device = 0;
         return;
     }
 
     __u8 count;
     size_t size;
-    if (ioctl(mDevice, JSIOCGAXES, &count) == -1) {
+    if (ioctl(mInternals->Device, JSIOCGAXES, &count) == -1) {
         mControllerInterface->SendError(this->GetName() + ": can't retrieve number of axes for " + mDeviceName);
-        mDevice = 0;
+        CloseDevice();
         return;
     }
     size = count;
@@ -300,9 +324,9 @@ void mtsJoystick::OpenDevice(void)
     mInputData.AnalogInputs().SetSize(size);
     mInputData.AnalogInputs().SetAll(0.0);
 
-    if (ioctl(mDevice, JSIOCGBUTTONS, &count) == -1) {
+    if (ioctl(mInternals->Device, JSIOCGBUTTONS, &count) == -1) {
         mControllerInterface->SendError(this->GetName() + ": can't retrieve number of buttons for " + mDeviceName);
-        mDevice = 0;
+        CloseDevice();
         return;
     }
     size = count;
@@ -315,10 +339,12 @@ void mtsJoystick::OpenDevice(void)
 
 void mtsJoystick::CloseDevice(void)
 {
-    if (mDevice != 0) {
+    if (mInternals->Device != 0) {
         mControllerInterface->SendStatus(this->GetName() + ": closing " + mDeviceName);
-        close(mDevice);
-        mDevice = 0;
+        close(mInternals->Device);
+        mInternals->Device = 0;
+        mInputData.AnalogInputs().SetAll(0.0);
+        mInputData.DigitalInputs().SetAll(false);
         mInputData.SetValid(false);
     }
 }

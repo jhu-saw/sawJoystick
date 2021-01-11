@@ -27,6 +27,7 @@ http://www.cisst.org/cisst/license.txt.
 #include <sawJoystick/sawJoystickConfig.h>
 #include <sawJoystick/sawJoystickExport.h>  // always include last
 
+struct mtsJoystickInternals;
 
 class CISST_EXPORT mtsJoystick : public mtsTaskContinuous
 {
@@ -36,19 +37,9 @@ class CISST_EXPORT mtsJoystick : public mtsTaskContinuous
 
 
  public:
-    inline mtsJoystick(const std::string & componentName):
-        mtsTaskContinuous(componentName, 1000)
-    {
-        Init();
-    }
-
-    inline mtsJoystick(const mtsTaskContinuousConstructorArg & arg):
-        mtsTaskContinuous(arg)
-    {
-        Init();
-    }
-
-    ~mtsJoystick(void) {};
+    mtsJoystick(const std::string & componentName);
+    mtsJoystick(const mtsTaskContinuousConstructorArg & arg);
+    ~mtsJoystick(void);
 
     void SetDevice(const std::string & device);
 
@@ -64,11 +55,12 @@ class CISST_EXPORT mtsJoystick : public mtsTaskContinuous
     void CloseDevice(void);
 
     std::string mDeviceName;
-    int mDevice = 0;
     mtsInterfaceProvided * mControllerInterface;
 
     prmInputData mInputData;
     mtsFunctionWrite InputDataEvent;
+
+    mtsJoystickInternals * mInternals;
 };
 
 CMN_DECLARE_SERVICES_INSTANTIATION(mtsJoystick);
