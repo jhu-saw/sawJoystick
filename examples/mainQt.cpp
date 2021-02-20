@@ -86,6 +86,11 @@ int main(int argc, char * argv[])
     // create the components
     mtsJoystick * joystick = new mtsJoystick("joystick");
 
+    // command line argument overwrites configuration file
+    if (device != "") {
+        joystick->SetDevice(device);
+    }
+
     // configure the components
     std::string configPath = "";
     // if there's a config file passed as argument, try to locate it
@@ -109,11 +114,6 @@ int main(int argc, char * argv[])
     // configure
     joystick->Configure(configPath);
 
-    // command line argument overwrites configuration file
-    if (device != "") {
-        joystick->SetDevice(device);
-    }
-
     // add the components to the component manager
     mtsManagerLocal * componentManager = mtsComponentManager::GetInstance();
     componentManager->AddComponent(joystick);
@@ -122,13 +122,13 @@ int main(int argc, char * argv[])
     mtsSystemQtWidgetComponent * systemWidget = new mtsSystemQtWidgetComponent("systemWidget");
     componentManager->AddComponent(systemWidget);
     componentManager->Connect("systemWidget", "Component",
-                              "joystick", "Controller");
+                              "joystick", "joystick");
     tabWidget->addTab(systemWidget, "System");
 
     prmInputDataQtWidgetComponent * inputWidget = new prmInputDataQtWidgetComponent("inputWidget");
     componentManager->AddComponent(inputWidget);
     componentManager->Connect("inputWidget", "Component",
-                              "joystick", "Controller");
+                              "joystick", "joystick");
     tabWidget->addTab(inputWidget, "Input");
 
     // custom user component

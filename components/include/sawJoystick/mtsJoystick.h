@@ -28,6 +28,7 @@ http://www.cisst.org/cisst/license.txt.
 #include <sawJoystick/sawJoystickExport.h>  // always include last
 
 struct mtsJoystickInternals;
+class prmInputDataConverter;
 
 class CISST_EXPORT mtsJoystick : public mtsTaskContinuous
 {
@@ -49,6 +50,10 @@ class CISST_EXPORT mtsJoystick : public mtsTaskContinuous
     void Run(void);
     void Cleanup(void);
 
+    inline prmInputDataConverter * Converter(void) {
+        return mConverter;
+    }
+    
  protected:
     void Init(void);
     void OpenDevice(void);
@@ -61,6 +66,7 @@ class CISST_EXPORT mtsJoystick : public mtsTaskContinuous
     mtsFunctionWrite InputDataEvent;
 
     mtsJoystickInternals * mInternals;
+    prmInputDataConverter * mConverter;
 };
 
 CMN_DECLARE_SERVICES_INSTANTIATION(mtsJoystick);

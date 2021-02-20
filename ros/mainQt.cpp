@@ -102,6 +102,11 @@ int main(int argc, char * argv[])
     // create the components
     mtsJoystick * joystick = new mtsJoystick("joystick");
 
+    // command line argument overwrites configuration file
+    if (device != "") {
+        joystick->SetDevice(device);
+    }
+
     // configure the components
     std::string configPath = "";
     // if there's a config file passed as argument, try to locate it
@@ -125,11 +130,6 @@ int main(int argc, char * argv[])
     // configure
     joystick->Configure(configPath);
 
-    // command line argument overwrites configuration file
-    if (device != "") {
-        joystick->SetDevice(device);
-    }
-
     // add the components to the component manager
     mtsManagerLocal * componentManager = mtsComponentManager::GetInstance();
     componentManager->AddComponent(joystick);
@@ -138,33 +138,33 @@ int main(int argc, char * argv[])
     mtsSystemQtWidgetComponent * systemWidget = new mtsSystemQtWidgetComponent("systemWidget");
     componentManager->AddComponent(systemWidget);
     componentManager->Connect("systemWidget", "Component",
-                              "joystick", "Controller");
+                              "joystick", "joystick");
     tabWidget->addTab(systemWidget, "System");
 
     prmInputDataQtWidgetComponent * inputWidget = new prmInputDataQtWidgetComponent("inputWidget");
     componentManager->AddComponent(inputWidget);
     componentManager->Connect("inputWidget", "Component",
-                              "joystick", "Controller");
+                              "joystick", "joystick");
     tabWidget->addTab(inputWidget, "Input");
 
     // ROS CRTK bridge
     mts_ros_crtk_bridge * crtk_bridge
         = new mts_ros_crtk_bridge("joystick_crtk_bridge", &rosNodeHandle);
-    crtk_bridge->bridge_interface_provided("joystick", "Controller", joystick->GetName(),
-                                           rosPeriod, tfPeriod);
+    crtk_bridge->bridge_all_interfaces_provided(joystick->GetName(), "",
+                                                rosPeriod, tfPeriod);
     // custom commands
     std::string space = joystick->GetName() + "/";
     mtsROSBridge & subscribers_bridge = crtk_bridge->subscribers_bridge();
     subscribers_bridge.AddSubscriberToCommandWrite<std::string, std_msgs::String>
-        ("Controller", "set_device", space + "set_device");
+        ("joystick", "set_device", space + "set_device");
     subscribers_bridge.AddSubscriberToCommandVoid
-        ("Controller", "open_device", space + "open_device");
+        ("joystick", "open_device", space + "open_device");
     subscribers_bridge.AddSubscriberToCommandVoid
-        ("Controller", "close_device", space + "close_device");
+        ("joystick", "close_device", space + "close_device");
     // add and connect all
     componentManager->AddComponent(crtk_bridge);
-    componentManager->Connect(subscribers_bridge.GetName(), "Controller",
-                              "joystick", "Controller");
+    componentManager->Connect(subscribers_bridge.GetName(), "joystick",
+                              "joystick", "joystick");
     crtk_bridge->Connect();
 
     // custom user component

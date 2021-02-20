@@ -20,9 +20,10 @@ http://www.cisst.org/cisst/license.txt.
 #include <errno.h>
 #include <linux/joystick.h>
 
-#include <cisstCommon/cmnStrings.h>
 #include <cisstCommon/cmnUnits.h>
 #include <cisstMultiTask/mtsInterfaceProvided.h>
+#include <cisstParameterTypes/prmInputDataConverter.h>
+
 #include <sawJoystick/mtsJoystick.h>
 
 CMN_IMPLEMENT_SERVICES_DERIVED_ONEARG(mtsJoystick, mtsTaskContinuous, mtsTaskContinuousConstructorArg);
@@ -49,17 +50,20 @@ mtsJoystick::mtsJoystick(const mtsTaskContinuousConstructorArg & arg):
 mtsJoystick::~mtsJoystick()
 {
     delete mInternals;
+    if (mConverter) {
+        delete mConverter;
+    }
 }
 
 
 void mtsJoystick::Init(void)
 {
     mInternals = new mtsJoystickInternals;
-
-    mDeviceName = "/dev/input/js0";
+    mDeviceName = "";
+    mConverter = 0;
 
     StateTable.AddData(mInputData, "input_data");
-    mControllerInterface = AddInterfaceProvided("Controller");
+    mControllerInterface = AddInterfaceProvided("joystick");
     if (mControllerInterface) {
         mControllerInterface->AddMessageEvents();
         mControllerInterface->AddCommandWrite(&mtsJoystick::SetDevice, this, "set_device", std::string("/dev/input/js0"));
@@ -99,152 +103,48 @@ void mtsJoystick::Configure(const std::string & filename)
                                  << jsonReader.getFormattedErrorMessages();
         return;
     }
+
     // keep the content of the file in cisstLog for debugging
     CMN_LOG_CLASS_INIT_VERBOSE << "Configure: " << this->GetName()
                                << " using file \"" << filename << "\"" << std::endl
                                << "----> content of configuration file: " << std::endl
                                << jsonConfig << std::endl
                                << "<----" << std::endl;
-#if 0
 
-    // start looking for configuration parameters
-    // name used for the tracking device, i.e. reference frame by default
-    // if not specified, "NDI"
-    jsonValue = jsonConfig["name"];
+    // look for converters
+    jsonValue = jsonConfig["converters"];
     if (!jsonValue.empty()) {
-        mTrackerName = jsonValue.asString();
+        if (!mConverter) {
+            mConverter = new prmInputDataConverter(*this);
+        }
+        mConverter->ConfigureJSON(jsonValue);
     }
 
-    jsonValue = jsonConfig["serial-port"];
-    // if the port is specified in the json file
+    jsonValue = jsonConfig["device"];
+    // if the device is specified in the json file
     if (!jsonValue.empty()) {
         // and if it has not already been set
-        if (mSerialPortName == "") {
-            mSerialPortName = jsonValue.asString();
-            if (mSerialPortName == "") {
-                CMN_LOG_CLASS_INIT_ERROR << "Configure: failed to convert \"serial-port\" to a string" << std::endl;
+        if (mDeviceName == "") {
+            mDeviceName = jsonValue.asString();
+            if (mDeviceName == "") {
+                CMN_LOG_CLASS_INIT_ERROR << "Configure: failed to convert \"device\" to a string" << std::endl;
                 return;
             }
-            CMN_LOG_CLASS_INIT_VERBOSE << "Configure: found \"serial-port\": " << mSerialPortName << std::endl;
+            CMN_LOG_CLASS_INIT_VERBOSE << "Configure: found \"device\": " << mDeviceName << std::endl;
         } else {
-            CMN_LOG_CLASS_INIT_WARNING << "Configure: \"serial-port\" in file \"" << filename
-                                       << "\" will be ignored since the serial port has already been set as: "
-                                       << mSerialPortName << std::endl;
+            CMN_LOG_CLASS_INIT_WARNING << "Configure: \"device\" in file \"" << filename
+                                       << "\" will be ignored since the device has already been set as: "
+                                       << mDeviceName << std::endl;
         }
     }
-
-    // path to locate tool definitions
-    const Json::Value definitionPath = jsonConfig["definition-path"];
-    // preserve order from config file
-    for (int index = (definitionPath.size() - 1);
-         index >= 0;
-         --index) {
-        std::string path = definitionPath[index].asString();
-        if (path != "") {
-            mDefinitionPath.Add(path, cmnPath::HEAD);
-        }
-    }
-
-    // stray markers
-    mStrayMarkersReferenceFrame = mTrackerName;
-    const Json::Value jsonStrayMarkers = jsonConfig["stray-markers"];
-    if (!jsonStrayMarkers.empty()) {
-        jsonValue = jsonStrayMarkers["reference"];
-        if (!jsonValue.empty()) {
-            mStrayMarkersReferenceFrame = jsonValue.asString();
-        }
-        jsonValue = jsonStrayMarkers["track"];
-        if (!jsonValue.empty()) {
-            mTrackingStrayMarkers = jsonValue.asBool();
-        }
-    }
-
-    // get tools defined by user
-    const Json::Value jsonTools = jsonConfig["tools"];
-    for (unsigned int index = 0; index < jsonTools.size(); ++index) {
-        std::string name, uniqueID, definition, reference;
-        // tools
-        const Json::Value jsonTool = jsonTools[index];
-        // --- name
-        jsonValue = jsonTool["name"];
-        if (!jsonValue.empty()) {
-            name = jsonValue.asString();
-            if (name == mTrackerName) {
-                CMN_LOG_CLASS_INIT_ERROR << "Configure: tools["
-                                         << index << "] can't use the name \"" << name
-                                         << "\" since it matches the tracker name.  You can either rename the tool or the tracker itself using \"name\" at the top level" << std::endl;
-                return;
-            }
-        } else {
-            CMN_LOG_CLASS_INIT_ERROR << "Configure: failed to find \"name\" for tools["
-                                     << index << "]" << std::endl;
-            return;
-        }
-        // --- serial number
-        jsonValue = jsonTool["unique-id"];
-        if (!jsonValue.empty()) {
-            uniqueID = jsonValue.asString();
-        } else {
-            CMN_LOG_CLASS_INIT_ERROR << "Configure: failed to find \"unique-id\" for tools["
-                                     << index << "]" << std::endl;
-            return;
-        }
-        // --- definition file (rom file)
-        jsonValue = jsonTool["definition"];
-        if (!jsonValue.empty()) {
-            definition = jsonValue.asString();
-            // try to locate the file
-            if (!cmnPath::Exists(definition)) {
-                CMN_LOG_CLASS_INIT_VERBOSE << "Configure: definition file \"" << definition
-                                           << "\" not found, using definition-paths to locate it."
-                                           << std::endl;
-                std::string fullPath = mDefinitionPath.Find(definition);
-                if (fullPath != "") {
-                    CMN_LOG_CLASS_INIT_VERBOSE << "Configure: found definition file \"" << fullPath
-                                               << "\" for \"" << definition << "\"" << std::endl;
-                    definition = fullPath;
-                } else {
-                    CMN_LOG_CLASS_INIT_ERROR << "Configure: can't find definition file \"" << definition
-                                             << "\" using search path: " << mDefinitionPath << std::endl;
-                    return;
-                }
-            }
-        } else {
-            definition = "";
-        }
-        // --- reference frame
-        jsonValue = jsonTool["reference"];
-        if (!jsonValue.empty()) {
-            reference = jsonValue.asString();
-        } else {
-            // default reference based on tracker name
-            reference = mTrackerName;
-            CMN_LOG_CLASS_INIT_VERBOSE << "Configure: no reference frame \"for\" for tools["
-                                     << index << "].  Position will be reported wrt NDI device frame or global reference frame" << std::endl;
-        }
-
-        AddTool(name, uniqueID, definition, reference);
-    }
-
-    // make sure the reference frame has been added if mReferenceFrame is set
-    if (mStrayMarkersReferenceFrame != mTrackerName) {
-        mStrayMarkersReferenceTool = mTools.GetItem(mStrayMarkersReferenceFrame, CMN_LOG_LEVEL_INIT_ERROR);
-        if (!mStrayMarkersReferenceTool) {
-            CMN_LOG_CLASS_INIT_ERROR << "Configure: can't find reference \"" << mStrayMarkersReferenceFrame
-                                     << "\".  Make sure reference frame/tool exists!" << std::endl;
-            mStrayMarkersReferenceFrame = mTrackerName;
-        }
-    }
-
-    // try to connect after configuring if serial port is defined
-    if (mSerialPortName != "") {
-        Connect(mSerialPortName);
-    }
-#endif
 }
 
 void mtsJoystick::Startup(void)
 {
+    // if device name has not been set yet
+    if (mDeviceName == "") {
+        mDeviceName = "/dev/input/js0";
+    }
     if (mInternals->Device == 0) {
         OpenDevice();
     }
@@ -270,11 +170,16 @@ void mtsJoystick::Run(void)
                 mInputData.AnalogInputs().at(event.number) = event.value;
                 break;
             default:
-                /* Ignore init events. */
+                // ignore init events.
                 break;
             }
             // emit event with new data
             InputDataEvent(mInputData);
+
+            // update converters if any
+            if (mConverter) {
+                mConverter->Update(mInputData);
+            }
         } else {
             if (errnum == EAGAIN) {
                 Sleep(1.0 * cmn_ms); // pseudo 1kHz
