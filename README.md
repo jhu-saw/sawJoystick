@@ -14,10 +14,17 @@ If needed, one can also add OpenIGTLink support using sawOpenIGTLink (contact th
  * cisst libraries: https://github.com/jhu-cisst/cisst
  * Qt for user interface
  * ROS (optional)
+ * A Linux Joystick compatible device
+
+# Devices supported
+
+Your device needs to be supported as a joystick under Linux.  You can test your device using `jstest-gtk` (on Ubuntu, install with `sudo apt install jstest-gtk`).
+
+Some cheap foot pedals can be configured to show up as joysticks on Linux.  This usually requires to configure the foot pedals using a small utility program that unfortunately runs on Windows.  Look for wording like "multimedia function, game controller functions." (from [Amazon listing](https://www.amazon.com/iKKEGOL-Control-Customized-Computer-Keyboard/dp/B01NAL3DV6)).
 
 # Build
 
-You can find some documentation re. compiling cisst and SAW components in the [dVRK wiki](https://github.com/jhu-dvrk/sawIntuitiveResearchKit/wiki/CatkinBuild#catkin-build-and-rosinstall)(best source if you're using Linux with ROS) and the [cisst wiki](https://github.com/jhu-cisst/cisst/wiki/Compiling-cisst-and-SAW-with-CMake)(more details and provides instructions for Windows as well).
+You can find some documentation re. compiling cisst and SAW components in the [dVRK wiki](https://github.com/jhu-dvrk/sawIntuitiveResearchKit/wiki/CatkinBuild#catkin-build-and-rosinstall) (best source if you're using Linux with ROS) and the [cisst wiki](https://github.com/jhu-cisst/cisst/wiki/Compiling-cisst-and-SAW-with-CMake) (more details and provides instructions for Windows as well).
 
 For Linux with ROS, we provide a rosinstall file to retrieve all the git repositories you need for sawJoystick:
 ```
