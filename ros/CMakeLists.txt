@@ -40,7 +40,7 @@ set (REQUIRED_CISST_LIBRARIES cisstCommon
                               cisstQt)
 
 # find cisst and make sure the required libraries have been compiled
-find_package (cisst 1.0.9 REQUIRED ${REQUIRED_CISST_LIBRARIES})
+find_package (cisst 1.1.0 REQUIRED ${REQUIRED_CISST_LIBRARIES})
 
 if (cisst_FOUND)
 
