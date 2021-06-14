@@ -52,7 +52,7 @@ if (cisst_FOUND_AS_REQUIRED)
   # Set the version number
   set (sawJoystick_VERSION_MAJOR "1")
   set (sawJoystick_VERSION_MINOR "0")
-  set (sawJoystick_VERSION_PATCH "0")
+  set (sawJoystick_VERSION_PATCH "1")
   set (sawJoystick_VERSION "${sawJoystick_VERSION_MAJOR}.${sawJoystick_VERSION_MINOR}.${sawJoystick_VERSION_PATCH}")
 
   # Generate sawJoystickRevision.h

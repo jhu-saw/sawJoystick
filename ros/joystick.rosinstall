@@ -17,4 +17,4 @@
 - git:
     local-name: cisst-saw/sawJoystick
     uri: https://github.com/jhu-saw/sawJoystick
-    version: 1.0.0
+    version: 1.0.1
