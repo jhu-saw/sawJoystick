@@ -18,6 +18,7 @@ http://www.cisst.org/cisst/license.txt.
 
 #include <fcntl.h>
 #include <errno.h>
+#include <string>
 #include <linux/joystick.h>
 
 #include <cisstCommon/cmnUnits.h>
