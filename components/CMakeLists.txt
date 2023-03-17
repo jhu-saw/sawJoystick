@@ -9,13 +9,8 @@
 #
 # --- end cisst license ---
 
-project (sawJoystick)
-
-cmake_minimum_required (VERSION 2.8)
-
-set (CMAKE_CXX_STANDARD 14)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
-set (CMAKE_CXX_EXTENSIONS OFF)
+cmake_minimum_required (VERSION 3.10)
+project (sawJoystick VERSION 1.1.0)
 
 # create a list of required cisst libraries
 set (REQUIRED_CISST_LIBRARIES cisstCommon
@@ -32,67 +27,56 @@ if (cisst_FOUND_AS_REQUIRED)
   include (${CISST_USE_FILE})
 
   # catkin/ROS paths
-  cisst_is_catkin_build (sawJoystick_IS_CATKIN_BUILT)
-  if (sawJoystick_IS_CATKIN_BUILT)
-    set (sawJoystick_CONFIG_FILE_DIR
-         "${CATKIN_DEVEL_PREFIX}/share/sawJoystick/cmake")
-    set (EXECUTABLE_OUTPUT_PATH "${CATKIN_DEVEL_PREFIX}/bin")
-    set (LIBRARY_OUTPUT_PATH    "${CATKIN_DEVEL_PREFIX}/lib")
-  else ()
-    set (sawJoystick_CONFIG_FILE_DIR "${sawJoystick_BINARY_DIR}")
-  endif ()
+  cisst_set_output_path ()
 
   # create/configure file for find_package (sawJoystick)
   set (sawJoystick_INCLUDE_DIR
        "${sawJoystick_SOURCE_DIR}/include"
        "${sawJoystick_BINARY_DIR}/include")
+  set (sawJoystick_HEADER_DIR "${sawJoystick_SOURCE_DIR}/include/sawJoystick")
   set (sawJoystick_LIBRARY_DIR "${LIBRARY_OUTPUT_PATH}")
   set (sawJoystick_LIBRARIES sawJoystick)
 
-  # Set the version number
-  set (sawJoystick_VERSION_MAJOR "1")
-  set (sawJoystick_VERSION_MINOR "0")
-  set (sawJoystick_VERSION_PATCH "1")
   set (sawJoystick_VERSION "${sawJoystick_VERSION_MAJOR}.${sawJoystick_VERSION_MINOR}.${sawJoystick_VERSION_PATCH}")
 
-  # Generate sawJoystickRevision.h
-  configure_file ("${sawJoystick_SOURCE_DIR}/code/sawJoystickRevision.h.in"
-                  "${sawJoystick_BINARY_DIR}/include/sawJoystick/sawJoystickRevision.h")
 
-  include_directories (${sawJoystick_INCLUDE_DIR} ${sawJoystick_BINARY_DIR})
+  # create/configure file for find_package (sawJoystick)
+  set (sawJoystick_INCLUDE_DIR
+       "${sawJoystick_SOURCE_DIR}/include"
+       "${sawJoystick_BINARY_DIR}/include")
   set (sawJoystick_HEADER_DIR "${sawJoystick_SOURCE_DIR}/include/sawJoystick")
+  set (sawJoystick_LIBRARY_DIR "${LIBRARY_OUTPUT_PATH}")
+  set (sawJoystick_LIBRARIES sawJoystick)
+  include_directories (${sawJoystick_INCLUDE_DIR} ${sawJoystick_BINARY_DIR})
+
+  # add all config files for this component
+  cisst_add_config_files (sawJoystick)
+
+  configure_file ("${sawJoystick_SOURCE_DIR}/code/sawJoystickConfig.h.in"
+                  "${sawJoystick_BINARY_DIR}/include/sawJoystick/sawJoystickConfig.h")
 
   add_library (sawJoystick
                ${sawJoystick_HEADER_DIR}/sawJoystickExport.h
                code/mtsJoystick.cpp
                ${sawJoystick_HEADER_DIR}/mtsJoystick.h)
-  set_property (TARGET sawJoystick PROPERTY FOLDER "sawJoystick")
+
+   set_target_properties (sawJoystick PROPERTIES
+                          VERSION ${sawJoystick_VERSION}
+                          FOLDER "sawJoystick")
+
   cisst_target_link_libraries (sawJoystick ${REQUIRED_CISST_LIBRARIES})
 
-  set (sawJoystick_CMAKE_CONFIG_FILE
-       "${sawJoystick_CONFIG_FILE_DIR}/sawJoystickConfig.cmake")
-
-  configure_file ("${CMAKE_CURRENT_SOURCE_DIR}/cmake/sawJoystickConfig.cmake.in"
-                  "${sawJoystick_CMAKE_CONFIG_FILE}"
-                  @ONLY)
-
-  configure_file ("${sawJoystick_SOURCE_DIR}/code/sawJoystickConfig.h.in"
-                  "${sawJoystick_BINARY_DIR}/include/sawJoystick/sawJoystickConfig.h")
-
   # Install target for headers and library
-  install (DIRECTORY
-           "${sawJoystick_SOURCE_DIR}/include/sawJoystick"
-           "${sawJoystick_BINARY_DIR}/include/sawJoystick"
+  install (DIRECTORY "${sawJoystick_SOURCE_DIR}/include/sawJoystick"
+                     "${sawJoystick_BINARY_DIR}/include/sawJoystick"
            DESTINATION include
+           COMPONENT sawJoystick-dev
            PATTERN .svn EXCLUDE)
 
-  install (TARGETS sawJoystick
+  install (TARGETS sawJoystick COMPONENT sawJoystick
            RUNTIME DESTINATION bin
            LIBRARY DESTINATION lib
            ARCHIVE DESTINATION lib)
-
-  install (FILES "${sawJoystick_BINARY_DIR}/sawJoystickConfig.cmake"
-           DESTINATION "${CISST_CMAKE_INSTALL_SUFFIX}/saw")
 
 else (cisst_FOUND_AS_REQUIRED)
   message ("Information: code in ${CMAKE_CURRENT_SOURCE_DIR} will not be compiled, it requires ${REQUIRED_CISST_LIBRARIES}")

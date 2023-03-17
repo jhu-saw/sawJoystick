@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 2.8.3)
-project(saw_joystick_config)
+cmake_minimum_required (VERSION 3.10)
+project(saw_joystick_config VERSION 1.1.0)
 
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED)
