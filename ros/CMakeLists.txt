@@ -1,5 +1,5 @@
 #
-# (C) Copyright 2021 Johns Hopkins University (JHU), All Rights Reserved.
+# (C) Copyright 2021-2023 Johns Hopkins University (JHU), All Rights Reserved.
 #
 # --- begin cisst license - do not edit ---
 #
@@ -9,9 +9,9 @@
 #
 # --- end cisst license ---
 
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.10)
 
-project (joystick_ros)
+project (joystick_ros VERSION 1.1.0)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
