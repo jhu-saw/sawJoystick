@@ -2,7 +2,7 @@
 
 This SAW component contains code for interfacing with the Linux joystick API.  It compiles on Linux and hasn't been tested on other OSs.
 
-The `ros` folder contains code for a ROS node that interfaces with the sawJoystick component and publishes the analog and digital inputs.  To build the ROS node, make sure you use `catkin build`.
+The `ros` folder contains code for a ROS node that interfaces with the sawJoystick component and publishes the analog and digital inputs.  To build the ROS node, make sure you use `catkin build` for ROS 1 or `colcon` for ROS 2.
 
 If needed, one can also add OpenIGTLink support using sawOpenIGTLink (contact the sawJoystick developers if you need help with this).
 
@@ -18,18 +18,25 @@ If needed, one can also add OpenIGTLink support using sawOpenIGTLink (contact th
 
 # Devices supported
 
-Your device needs to be supported as a joystick under Linux.  You can test your device using `jstest-gtk` (on Ubuntu, install with `sudo apt install jstest-gtk`).
+Your device needs to be supported as a joystick under Linux.  You can
+test your device using `jstest-gtk` (on Ubuntu, install with `sudo apt
+install jstest-gtk`).
 
-Some cheap foot pedals can be configured to show up as joysticks on Linux.  This usually requires to configure the foot pedals using a small utility program that unfortunately runs on Windows.  Look for wording like "multimedia function, game controller functions." (from [Amazon listing](https://www.amazon.com/iKKEGOL-Control-Customized-Computer-Keyboard/dp/B01NAL3DV6)).
+Some cheap foot pedals can be configured to show up as joysticks on
+Linux.  This usually requires to configure the foot pedals using a
+small utility program that unfortunately runs on Windows.  Look for
+wording like "multimedia function, game controller functions." (from
+[Amazon
+listing](https://www.amazon.com/iKKEGOL-Control-Customized-Computer-Keyboard/dp/B01NAL3DV6)).
 
 # Build
 
-You can find some documentation re. compiling cisst and SAW components in the [dVRK wiki](https://github.com/jhu-dvrk/sawIntuitiveResearchKit/wiki/CatkinBuild#catkin-build-and-rosinstall) (best source if you're using Linux with ROS) and the [cisst wiki](https://github.com/jhu-cisst/cisst/wiki/Compiling-cisst-and-SAW-with-CMake) (more details and provides instructions for Windows as well).
+You can find some documentation re. compiling cisst and SAW components
+for in the dVRK wiki:
+* [ROS 1](https://github.com/jhu-dvrk/sawIntuitiveResearchKit/wiki/CatkinBuild)
+* [ROS 2](https://github.com/jhu-dvrk/sawIntuitiveResearchKit/wiki/BuildROS2)
 
-For Linux with ROS, we provide a rosinstall file to retrieve all the git repositories you need for sawJoystick:
-```
-wstool merge https://raw.githubusercontent.com/jhu-saw/sawJoystick/devel/ros/joystick.rosinstall
-```
+For Linux with ROS, we provide a VCS files to retrieve all the git repositories you need for sawJoystick in the `vcs` directory.
 
 # Running the examples
 
@@ -53,19 +60,25 @@ sawJoystickQtExample:
  -m, --component-manager : JSON file to configure component manager (optional)
 ```
 
-Please note that configuration files are not supported yet.
+## Configuration file
+
+The configuration file can be used to specify the device to use (vs
+specifying it on the command line).  It can also be used to convert
+some of the signals to different outputs.  For example, one can create
+a new interface with a "button" event using one of the buttons from
+the joystick.  See examples in `core/share`.
 
 ## ROS
 
-Please read the section above for the configuration file description.  The ROS node is `joystick` and can be found in the package `joystick_ros`:
+Please read the section above for the configuration file description.  The ROS node is `joystick` and can be found in the package `joystick`:
 ```sh
 roscd saw_joystick_config
-rosrun joystick_ros joystick -d /dev/input/js0
+rosrun joystick joystick -d /dev/input/js0
 ```
 
 The ROS node has a few more command line options:
 ```sh
-/home/anton/catkin_ws/devel/lib/joystick_ros/joystick:
+/home/anton/catkin_ws/devel/lib/joystick/joystick:
  -j <value>, --json-config <value> : json configuration file (optional)
  -d <value>, --device <value> : device (e.g. /dev/input/js0...) (optional)
  -p <value>, --ros-period <value> : period in seconds to read all components and publish (default 0.02, 20 ms, 50Hz).  There is no point to have a period higher than the tracker's period (optional)

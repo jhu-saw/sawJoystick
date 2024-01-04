@@ -5,7 +5,7 @@
   Author(s):  Anton Deguet
   Created on: 2021-01-06
 
-  (C) Copyright 2021 Johns Hopkins University (JHU), All Rights Reserved.
+  (C) Copyright 2021-2024 Johns Hopkins University (JHU), All Rights Reserved.
 
 --- begin cisst license - do not edit ---
 
@@ -30,8 +30,13 @@ http://www.cisst.org/cisst/license.txt.
 #include <QApplication>
 #include <QMainWindow>
 
+#if ROS1
 #include <cisst_ros_bridge/mtsROSBridge.h>
 #include <cisst_ros_crtk/mts_ros_crtk_bridge.h>
+#elif ROS2
+#include <cisst_ros2_bridge/mtsROSBridge.h>
+#include <cisst_ros2_crtk/mts_ros_crtk_bridge.h>
+#endif
 
 int main(int argc, char * argv[])
 {
@@ -43,8 +48,13 @@ int main(int argc, char * argv[])
     cmnLogger::AddChannel(std::cerr, CMN_LOG_ALLOW_ERRORS_AND_WARNINGS);
 
     // create ROS node handle
+#if ROS1
     ros::init(argc, argv, "saw_joystick", ros::init_options::AnonymousName);
-    ros::NodeHandle rosNodeHandle;
+    ros::NodeHandle rosNode;
+#elif ROS2
+    rclcpp::init(argc, argv);
+    auto rosNode = std::make_shared<rclcpp::Node>("joystick");
+#endif
 
     // parse options
     cmnCommandLineOptions options;
@@ -148,15 +158,27 @@ int main(int argc, char * argv[])
     tabWidget->addTab(inputWidget, "Input");
 
     // ROS CRTK bridge
+#if ROS1
     mts_ros_crtk_bridge * crtk_bridge
-        = new mts_ros_crtk_bridge("joystick_crtk_bridge", &rosNodeHandle);
+        = new mts_ros_crtk_bridge("joystick_crtk_bridge", &rosNode);
+#elif ROS2
+    mts_ros_crtk_bridge * crtk_bridge
+        = new mts_ros_crtk_bridge("joystick_crtk_bridge", rosNode);
+#endif
+
     crtk_bridge->bridge_all_interfaces_provided(joystick->GetName(), "",
                                                 rosPeriod, tfPeriod);
     // custom commands
     std::string space = joystick->GetName() + "/";
     mtsROSBridge & subscribers_bridge = crtk_bridge->subscribers_bridge();
+#if ROS1
     subscribers_bridge.AddSubscriberToCommandWrite<std::string, std_msgs::String>
         ("joystick", "set_device", space + "set_device");
+#elif ROS2
+    subscribers_bridge.AddSubscriberToCommandWrite<std::string, std_msgs::msg::String>
+        ("joystick", "set_device", space + "set_device");
+#endif
+
     subscribers_bridge.AddSubscriberToCommandVoid
         ("joystick", "open_device", space + "open_device");
     subscribers_bridge.AddSubscriberToCommandVoid
@@ -185,7 +207,11 @@ int main(int argc, char * argv[])
     cmnLogger::Kill();
 
     // stop ROS node
+#if ROS1
     ros::shutdown();
+#elif ROS2
+    rclcpp::shutdown();
+#endif
 
     // kill all components and perform cleanup
     componentManager->KillAllAndWait(5.0 * cmn_s);

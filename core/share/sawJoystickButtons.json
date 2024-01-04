@@ -4,7 +4,7 @@
     [
         {
             "type": "interface-provided-button",
-	    "index-input": 0,
+            "index-input": 0,
             "interface-name": "Clutch"
         }
     ]
