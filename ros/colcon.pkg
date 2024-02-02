@@ -1,4 +1,4 @@
 {
   "name": "joystick",
-  "dependencies": ["cisst", "sawJoystickCore"]
+  "dependencies": ["cisst_ros_crtk", "sawJoystickCore"]
 }

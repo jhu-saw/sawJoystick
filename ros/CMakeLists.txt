@@ -13,35 +13,35 @@ cmake_minimum_required (VERSION 3.10)
 project (joystick VERSION 1.1.0)
 
 # first test for ROS1
+set (ROS1_depends cisst_ros_crtk roscpp roslib)
+
 find_package (catkin QUIET
   COMPONENTS
-  cisst_ros_crtk
-  roscpp
-  roslib)
+  ${ROS1_depends})
 
 # ROS 1
 if (catkin_FOUND)
-  add_definitions (-DROS1)
   set (ROS_VERSION 1)
+  file (MAKE_DIRECTORY "${CATKIN_DEVEL_PREFIX}/include")
+  catkin_package (INCLUDE_DIRS "${CATKIN_DEVEL_PREFIX}/include"
+    CATKIN_DEPENDS ${ROS1_depends})
+  include_directories (${catkin_INCLUDE_DIRS})
 else (catkin_FOUND)
 
   # look for ROS2
   find_package (ament_cmake QUIET)
   if (ament_cmake_FOUND)
-    add_definitions (-DROS2)
     set (ROS_VERSION 2)
-    find_package (rclcpp REQUIRED)
-    find_package (std_msgs REQUIRED)
-    find_package (std_srvs REQUIRED)
-    find_package (geometry_msgs REQUIRED)
-    find_package (sensor_msgs REQUIRED)
-    find_package (diagnostic_msgs REQUIRED)
-    find_package (cisst_msgs REQUIRED)
-    find_package (tf2_ros REQUIRED)
-    find_package (tf2_msgs REQUIRED)
-    find_package (crtk_msgs REQUIRED)
-    find_package (cisst_ros2_bridge REQUIRED)
-    find_package (cisst_ros2_crtk REQUIRED)
+    set (ROS2_depends rclcpp
+      std_msgs std_srvs
+      geometry_msgs sensor_msgs diagnostic_msgs
+      tf2_ros tf2_msgs
+      cisst_msgs crtk_msgs
+      cisst_ros_bridge cisst_ros_crtk
+      )
+    foreach (_dep ${ROS2_depends})
+      find_package (${_dep} REQUIRED)
+    endforeach ()
 
   endif (ament_cmake_FOUND)
 endif (catkin_FOUND)
@@ -74,17 +74,14 @@ if (cisst_FOUND_AS_REQUIRED)
   if (sawJoystick_FOUND)
 
     if (ROS_VERSION EQUAL 1)
-      file (MAKE_DIRECTORY "${CATKIN_DEVEL_PREFIX}/include")
-      catkin_package (INCLUDE_DIRS "${CATKIN_DEVEL_PREFIX}/include"
-        CATKIN_DEPENDS cisst_ros_crtk roscpp roslib)
-      include_directories (${catkin_INCLUDE_DIRS})
+
     endif ()
 
     # sawJoystick configuration
     include_directories (${sawJoystick_INCLUDE_DIR} ${joystick_SOURCE_DIR})
     link_directories (${sawJoystick_LIBRARY_DIR})
 
-    add_executable (joystick mainQt.cpp)
+    add_executable (joystick joystick.cpp)
 
     # link against non cisst libraries and saw components
     target_link_libraries (joystick
@@ -103,16 +100,7 @@ if (cisst_FOUND_AS_REQUIRED)
     if (ROS_VERSION EQUAL 2)
       ament_target_dependencies (
         joystick
-        rclcpp
-        std_msgs
-        geometry_msgs
-        sensor_msgs
-        diagnostic_msgs
-        cisst_msgs
-        tf2_ros
-        crtk_msgs
-        cisst_ros2_bridge
-        cisst_ros2_crtk
+        ${ROS2_depends}
         )
       ament_package ()
     endif ()
