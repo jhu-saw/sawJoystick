@@ -22,9 +22,7 @@ find_package (catkin QUIET
 # ROS 1
 if (catkin_FOUND)
   set (ROS_VERSION 1)
-  file (MAKE_DIRECTORY "${CATKIN_DEVEL_PREFIX}/include")
-  catkin_package (INCLUDE_DIRS "${CATKIN_DEVEL_PREFIX}/include"
-    CATKIN_DEPENDS ${ROS1_depends})
+  catkin_package (CATKIN_DEPENDS ${ROS1_depends})
   include_directories (${catkin_INCLUDE_DIRS})
 else (catkin_FOUND)
 
