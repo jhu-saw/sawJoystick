@@ -73,10 +73,6 @@ if (cisst_FOUND_AS_REQUIRED)
 
   if (sawJoystick_FOUND)
 
-    if (ROS_VERSION EQUAL 1)
-
-    endif ()
-
     # sawJoystick configuration
     include_directories (${sawJoystick_INCLUDE_DIR} ${joystick_SOURCE_DIR})
     link_directories (${sawJoystick_LIBRARY_DIR})
