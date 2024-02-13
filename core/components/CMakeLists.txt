@@ -37,8 +37,6 @@ if (cisst_FOUND_AS_REQUIRED)
   set (sawJoystick_LIBRARY_DIR "${LIBRARY_OUTPUT_PATH}")
   set (sawJoystick_LIBRARIES sawJoystick)
 
-  set (sawJoystick_VERSION "${sawJoystick_VERSION_MAJOR}.${sawJoystick_VERSION_MINOR}.${sawJoystick_VERSION_PATCH}")
-
   # create/configure file for find_package (sawJoystick)
   set (sawJoystick_INCLUDE_DIR
        "${sawJoystick_SOURCE_DIR}/include"
@@ -59,9 +57,9 @@ if (cisst_FOUND_AS_REQUIRED)
                code/mtsJoystick.cpp
                ${sawJoystick_HEADER_DIR}/mtsJoystick.h)
 
-   set_target_properties (sawJoystick PROPERTIES
-                          VERSION ${sawJoystick_VERSION}
-                          FOLDER "sawJoystick")
+  set_target_properties (sawJoystick PROPERTIES
+    VERSION ${sawJoystick_VERSION}
+    FOLDER "sawJoystick")
 
   cisst_target_link_libraries (sawJoystick ${REQUIRED_CISST_LIBRARIES})
 
